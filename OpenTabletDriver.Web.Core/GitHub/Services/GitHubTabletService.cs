@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,16 +11,16 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
     public class GitHubTabletService : ITabletService
     {
         private readonly IServiceProvider serviceProvider;
+        private readonly IReleaseService releaseService;
 
-        public GitHubTabletService(IServiceProvider serviceProvider)
+        public GitHubTabletService(IServiceProvider serviceProvider, IReleaseService releaseService)
         {
             this.serviceProvider = serviceProvider;
+            this.releaseService = releaseService;
 
-            GetMarkdownCached = new CachedTask<string>(GetMarkdownRawInternal(), CacheTime);
+            GetMarkdownCached = new CachedTask<string>(GetMarkdownRawInternal, CacheTime);
         }
 
-        private const string TABLETS_MARKDOWN_URL =
-            "https://github.com/OpenTabletDriver/OpenTabletDriver/raw/master/TABLETS.md";
         private static readonly TimeSpan CacheTime = TimeSpan.FromMinutes(1);
 
         private CachedTask<string> GetMarkdownCached { get; }
@@ -31,8 +32,11 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
 
         public async Task<string> GetMarkdownRawInternal()
         {
-            using (var client = serviceProvider.GetRequiredService<HttpClient>())
-            using (var httpStream = await client.GetStreamAsync(TABLETS_MARKDOWN_URL))
+            var repoContent = await releaseService.GetRepositoryContent();
+            var file = repoContent.First(r => r.Name == "TABLETS.md");
+
+            using (var httpClient = serviceProvider.GetRequiredService<HttpClient>())
+            using (var httpStream = await httpClient.GetStreamAsync(file.DownloadUrl))
             using (var sr = new StreamReader(httpStream))
             {
                 return await sr.ReadToEndAsync();

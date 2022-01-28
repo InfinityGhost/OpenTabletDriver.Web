@@ -7,7 +7,7 @@ namespace OpenTabletDriver.Web.Core
 {
     public class CachedTask<TResult>
     {
-        public CachedTask(Task<TResult> task, TimeSpan invalidateTime)
+        public CachedTask(Func<Task<TResult>> task, TimeSpan invalidateTime)
         {
             Task = task;
             InvalidateTime = invalidateTime;
@@ -16,7 +16,7 @@ namespace OpenTabletDriver.Web.Core
         private TResult? cachedResult;
         private DateTime lastRequest;
 
-        public Task<TResult> Task { get; }
+        public Func<Task<TResult>> Task { get; }
         public TimeSpan InvalidateTime { set; get; }
 
         public async Task<TResult> Get()
@@ -25,7 +25,7 @@ namespace OpenTabletDriver.Web.Core
             lastRequest = DateTime.Now;
 
             if (cachedResult == null || invalidate)
-                return cachedResult = await Task;
+                return cachedResult = await Task();
             else
                 return cachedResult;
         }
