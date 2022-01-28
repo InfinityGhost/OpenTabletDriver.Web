@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Formats.Asn1;
 using System.Linq;
 using System.Threading.Tasks;
 using Octokit;
@@ -11,52 +10,69 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
 {
     public class GitHubReleaseService : IReleaseService
     {
-        public async Task<IEnumerable<IRelease>> GetAllReleases()
+        private IServiceProvider serviceProvider;
+        private IGitHubClient client;
+
+        public GitHubReleaseService(IServiceProvider serviceProvider, IGitHubClient client)
         {
-            if (await GitHubCore.GetClient() is GitHubClient client)
-            {
-                var repo = await GitHubCore.GetRepository(client);
-                var releases = await client.Repository.Release.GetAll(repo.Id);
+            this.serviceProvider = serviceProvider;
+            this.client = client;
 
-                return releases.Select(r => new GitHubRelease(r));
-            }
-
-            return null;
+            GetRepositoryCached = new CachedTask<Repository>(GetRepositoryInternal(), CacheTime);
+            GetLatestReleaseCached = new CachedTask<IRelease>(GetLatestReleaseInternal(), CacheTime);
+            GetAllReleasesCached = new CachedTask<IEnumerable<IRelease>>(GetAllReleasesInternal(), CacheTime);
         }
 
-        public async Task<IRelease> GetLatestRelease()
+        private const string REPOSITORY_OWNER = "OpenTabletDriver";
+        private const string REPOSITORY_NAME = "OpenTabletDriver";
+
+        private static readonly TimeSpan CacheTime = TimeSpan.FromMinutes(1);
+
+        private CachedTask<Repository> GetRepositoryCached { get; }
+        private CachedTask<IEnumerable<IRelease>> GetAllReleasesCached { get; }
+        private CachedTask<IRelease> GetLatestReleaseCached { get; }
+
+        public Task<Repository> GetRepository()
         {
-            if (await GitHubCore.GetClient() is GitHubClient client)
-            {
-                var repo = await GitHubCore.GetRepository(client);
-                var release = await client.Repository.Release.GetLatest(repo.Id);
-
-                return new GitHubRelease(release);
-            }
-
-            return null;
+            return GetRepositoryCached;
         }
 
-        public async Task<IRelease> GetLatestWorkflowRun()
+        public Task<IEnumerable<IRelease>> GetAllReleases()
         {
-            if (await GitHubCore.GetClient() is GitHubClient client)
-            {
-                var latestCommit = await GitHubCore.GetLatestCommit(client);
-                var runsResponse = await client.Check.Run.GetAllForReference(latestCommit.Repository.Id, latestCommit.Ref);
+            return GetAllReleasesCached;
+        }
 
-                var targetRun = runsResponse.CheckRuns.FirstOrDefault(r => r.Name == GitHubCore.DOTNET_WORKFLOW_RUN);
-                return new GitHubWorkflowRun(targetRun);
-            }
-
-            throw new NotImplementedException(); // TODO: implement
+        public Task<IRelease> GetLatestRelease()
+        {
+            return GetLatestReleaseCached;
         }
 
         public async Task<IRelease> GetRelease(string tag)
         {
-            var repo = await GitHubCore.GetRepository();
-            var client = await GitHubCore.GetClient();
+            var repo = await GetRepositoryCached.Get();
             var release = await client.Repository.Release.Get(repo.Id, tag);
-            return new GitHubRelease(release);
+
+            return serviceProvider.CreateInstance<GitHubRelease>(release);
+        }
+
+        private async Task<IRelease> GetLatestReleaseInternal()
+        {
+            var repo = await GetRepositoryCached.Get();
+            var release = await client.Repository.Release.GetLatest(repo.Id);
+
+            return serviceProvider.CreateInstance<GitHubRelease>(release);
+        }
+
+        private async Task<IEnumerable<IRelease>> GetAllReleasesInternal()
+        {
+            var repo = await GetRepositoryCached.Get();
+            var releases = await client.Repository.Release.GetAll(repo.Id);
+            return releases.Select(r => serviceProvider.CreateInstance<GitHubRelease>(r));
+        }
+
+        private Task<Repository> GetRepositoryInternal()
+        {
+            return client.Repository.Get(REPOSITORY_OWNER, REPOSITORY_NAME);
         }
     }
 }

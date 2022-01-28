@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Tar;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using OpenTabletDriver.Web.Core.Services;
 
@@ -16,6 +17,13 @@ namespace OpenTabletDriver.Web.Core.Plugins
 {
     public class GitHubPluginMetadataService : IPluginMetadataService
     {
+        private readonly IServiceProvider serviceProvider;
+
+        public GitHubPluginMetadataService(IServiceProvider serviceProvider)
+        {
+            this.serviceProvider = serviceProvider;
+        }
+
         public const string REPOSITORY_OWNER = "OpenTabletDriver";
         public const string REPOSITORY_NAME = "Plugin-Repository";
 
@@ -25,24 +33,17 @@ namespace OpenTabletDriver.Web.Core.Plugins
             return plugins.OrderBy(p => p.Name).Distinct(new PluginMetadataComparer());
         }
 
-        private static HttpClient GetClient()
-        {
-            var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("User-Agent", "OpenTabletDriver-Web");
-            return client;
-        }
-
-        public static async Task<IEnumerable<PluginMetadata>> DownloadAsync(string owner, string name,
+        public async Task<IEnumerable<PluginMetadata>> DownloadAsync(string owner, string name,
             string gitRef = null)
         {
             string archiveUrl = $"https://api.github.com/repos/{owner}/{name}/tarball/{gitRef}";
             return await DownloadAsync(archiveUrl);
         }
 
-        public static async Task<IEnumerable<PluginMetadata>> DownloadAsync(string archiveUrl)
+        public async Task<IEnumerable<PluginMetadata>> DownloadAsync(string archiveUrl)
         {
-            using (var client = GetClient())
-            using (var httpStream = await client.GetStreamAsync(archiveUrl))
+            using (var httpClient = serviceProvider.GetRequiredService<HttpClient>())
+            using (var httpStream = await httpClient.GetStreamAsync(archiveUrl))
                 return FromStream(httpStream);
         }
 
@@ -70,7 +71,7 @@ namespace OpenTabletDriver.Web.Core.Plugins
 
         protected static string CalculateSHA256(Stream stream)
         {
-            using (var sha256 = SHA256Managed.Create())
+            using (var sha256 = SHA256.Create())
             {
                 var hashData = sha256.ComputeHash(stream);
                 stream.Position = 0;

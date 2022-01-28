@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Octokit;
 using OpenTabletDriver.Web.Core.Contracts;
 
 namespace OpenTabletDriver.Web.Core.Services
@@ -12,8 +13,7 @@ namespace OpenTabletDriver.Web.Core.Services
 
         Task<IRelease> GetLatestRelease();
 
-        Task<IRelease> GetLatestWorkflowRun();
-
         Task<IRelease> GetRelease(string tag);
+        Task<Repository> GetRepository();
     }
 }
