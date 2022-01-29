@@ -35,7 +35,7 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
 
         public async Task<string> GetMarkdownRawInternal()
         {
-            using (var httpStream = await httpClient.GetStreamAsync("https://api.github.com/repos/OpenTabletDriver/Plugin-Repository/tarball/"))
+            using (var httpStream = await httpClient.GetStreamAsync("https://raw.githubusercontent.com/OpenTabletDriver/OpenTabletDriver/master/TABLETS.md"))
             using (var sr = new StreamReader(httpStream))
             {
                 return await sr.ReadToEndAsync();
