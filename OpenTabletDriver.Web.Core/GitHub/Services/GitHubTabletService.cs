@@ -25,16 +25,13 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
             this.releaseService = releaseService;
             this.logger = logger;
 
-            GetMarkdownCached = new CachedTask<string>(GetMarkdownRawInternal, CacheTime);
         }
 
         private static readonly TimeSpan CacheTime = TimeSpan.FromMinutes(1);
 
-        private CachedTask<string> GetMarkdownCached { get; }
-
         public Task<string> GetMarkdownRaw()
         {
-            return GetMarkdownCached;
+            return GetMarkdownRawInternal();
         }
 
         public async Task<string> GetMarkdownRawInternal()
