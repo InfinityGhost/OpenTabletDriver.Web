@@ -48,11 +48,9 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
             logger.Log(LogLevel.Information, $"Found TABLETS.md: {file.Size} bytes");
 
             using (var httpClient = serviceProvider.GetRequiredService<HttpClient>())
-            using (var httpStream = await httpClient.GetStreamAsync(file.DownloadUrl))
-            using (var sr = new StreamReader(httpStream))
             {
                 logger.Log(LogLevel.Information, "Downloading TABLETS.md...");
-                var content = await sr.ReadToEndAsync();
+                var content = await httpClient.GetStringAsync(file.DownloadUrl);
 
                 logger.Log(LogLevel.Information, "Successfully downloaded TABLETS.md");
                 return content;
