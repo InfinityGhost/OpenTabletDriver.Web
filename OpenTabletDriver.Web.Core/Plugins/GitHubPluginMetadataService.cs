@@ -17,11 +17,11 @@ namespace OpenTabletDriver.Web.Core.Plugins
 {
     public class GitHubPluginMetadataService : IPluginMetadataService
     {
-        private readonly IServiceProvider serviceProvider;
+        private readonly HttpClient httpClient;
 
-        public GitHubPluginMetadataService(IServiceProvider serviceProvider)
+        public GitHubPluginMetadataService(HttpClient httpClient)
         {
-            this.serviceProvider = serviceProvider;
+            this.httpClient = httpClient;
         }
 
         public const string REPOSITORY_OWNER = "OpenTabletDriver";
@@ -42,7 +42,6 @@ namespace OpenTabletDriver.Web.Core.Plugins
 
         public async Task<IEnumerable<PluginMetadata>> DownloadAsync(string archiveUrl)
         {
-            using (var httpClient = serviceProvider.GetRequiredService<HttpClient>())
             using (var httpStream = await httpClient.GetStreamAsync(archiveUrl))
                 return FromStream(httpStream);
         }

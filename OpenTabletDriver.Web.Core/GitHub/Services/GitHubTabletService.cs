@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Octokit.Internal;
 using OpenTabletDriver.Web.Core.Services;
 
 namespace OpenTabletDriver.Web.Core.GitHub.Services
@@ -12,11 +13,13 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
     {
         private readonly IServiceProvider serviceProvider;
         private readonly IReleaseService releaseService;
+        private readonly HttpClient httpClient;
 
-        public GitHubTabletService(IServiceProvider serviceProvider, IReleaseService releaseService)
+        public GitHubTabletService(IServiceProvider serviceProvider, IReleaseService releaseService, HttpClient httpClient)
         {
             this.serviceProvider = serviceProvider;
             this.releaseService = releaseService;
+            this.httpClient = httpClient;
 
             GetMarkdownCached = new CachedTask<string>(GetMarkdownRawInternal, CacheTime);
         }
@@ -35,7 +38,6 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
             var repoContent = await releaseService.GetRepositoryContent();
             var file = repoContent.First(r => r.Name == "TABLETS.md");
 
-            using (var httpClient = serviceProvider.GetRequiredService<HttpClient>())
             using (var httpStream = await httpClient.GetStreamAsync(file.DownloadUrl))
             using (var sr = new StreamReader(httpStream))
             {

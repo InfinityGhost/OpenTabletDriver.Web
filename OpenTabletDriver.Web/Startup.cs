@@ -33,9 +33,11 @@ namespace OpenTabletDriver.Web
             services.AddSingleton<IReleaseService, GitHubReleaseService>()
                 .AddSingleton<IGitHubClient, GitHubClient>(AuthenticateGitHub)
                 .AddSingleton<ITabletService, GitHubTabletService>()
-                .AddTransient(GetHttpClient)
                 .AddSingleton<IPluginMetadataService, GitHubPluginMetadataService>()
                 .AddSingleton<IFrameworkService, DotnetCoreService>();
+
+            services.AddHttpClient<ITabletService, GitHubTabletService>(SetupHttpClient);
+            services.AddHttpClient<IPluginMetadataService, GitHubPluginMetadataService>(SetupHttpClient);
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
@@ -91,11 +93,9 @@ namespace OpenTabletDriver.Web
             };
         }
 
-        private HttpClient GetHttpClient(IServiceProvider serviceProvider)
+        private void SetupHttpClient(HttpClient client)
         {
-            var client = new HttpClient();
             client.DefaultRequestHeaders.Add("User-Agent", "OpenTabletDriver-Web");
-            return client;
         }
     }
 }
