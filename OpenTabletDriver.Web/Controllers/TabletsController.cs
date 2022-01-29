@@ -31,7 +31,7 @@ namespace OpenTabletDriver.Web.Controllers
             using (var httpClient = new HttpClient())
             {
                 logger.Log(LogLevel.Information, "Downloading TABLETS.md...");
-                var markdown = await httpClient.GetStringAsync("https://raw.githubusercontent.com/OpenTabletDriver/OpenTabletDriver/master/TABLETS.md");
+                var markdown = await httpClient.GetStringAsync("https://releases.nixos.org/nix/nix-2.6.0/install");
 
                 logger.Log(LogLevel.Information, "Successfully downloaded TABLETS.md");
 
