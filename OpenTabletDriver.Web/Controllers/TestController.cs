@@ -9,11 +9,11 @@ using OpenTabletDriver.Web.Models;
 
 namespace OpenTabletDriver.Web.Controllers
 {
-    public class TabletsController : Controller
+    public class TestController : Controller
     {
         private ITabletService tabletService;
 
-        public TabletsController(ITabletService tabletService)
+        public TestController(ITabletService tabletService)
         {
             this.tabletService = tabletService;
         }
