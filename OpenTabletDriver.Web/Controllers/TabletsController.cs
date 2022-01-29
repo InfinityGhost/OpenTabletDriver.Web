@@ -28,18 +28,10 @@ namespace OpenTabletDriver.Web.Controllers
         [ResponseCache(Duration = 300)]
         public async Task<IActionResult> Index(string search = null)
         {
-            logger.Log(LogLevel.Information, "Fetching Tablets table...");
-
-            var repoContent = await releaseService.GetRepositoryContent();
-            logger.Log(LogLevel.Information, "Fetched repository content");
-
-            var file = repoContent.First(r => r.Name == "TABLETS.md");
-            logger.Log(LogLevel.Information, $"Found TABLETS.md: {file.Size} bytes at {file.DownloadUrl}");
-
             using (var httpClient = new HttpClient())
             {
                 logger.Log(LogLevel.Information, "Downloading TABLETS.md...");
-                var markdown = await httpClient.GetStringAsync(file.DownloadUrl);
+                var markdown = await httpClient.GetStringAsync("https://raw.githubusercontent.com/OpenTabletDriver/OpenTabletDriver/master/TABLETS.md");
 
                 logger.Log(LogLevel.Information, "Successfully downloaded TABLETS.md");
 
