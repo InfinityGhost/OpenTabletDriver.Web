@@ -84,6 +84,7 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
                 archive.ExtractContents(extractRootPath);
 
                 var extractedDirPath = Directory.GetDirectories(extractRootPath).Single();
+                Directory.CreateDirectory(Path.Join(rootPath, owner));
                 Directory.Move(extractedDirPath, dirPath);
 
                 if (Directory.Exists(extractRootPath))
