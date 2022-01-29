@@ -45,7 +45,7 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
             logger.Log(LogLevel.Information, "Fetched repository content");
 
             var file = repoContent.First(r => r.Name == "TABLETS.md");
-            logger.Log(LogLevel.Information, $"Found TABLETS.md: {file.Size} bytes");
+            logger.Log(LogLevel.Information, $"Found TABLETS.md: {file.Size} bytes at {file.DownloadUrl}");
 
             using (var httpClient = serviceProvider.GetRequiredService<HttpClient>())
             {
