@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Tar;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Octokit;
 using OpenTabletDriver.Web.Core.Services;
 
@@ -14,16 +15,19 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
 {
     public class GitHubRepositoryService : IRepositoryService
     {
+        private readonly ILogger<GitHubRepositoryService> logger;
         private readonly IGitHubClient client;
         private readonly HttpClient httpClient;
         private readonly IMemoryCache cache;
 
         public GitHubRepositoryService(
+            ILogger<GitHubRepositoryService> logger,
             IGitHubClient client,
             HttpClient httpClient,
             IMemoryCache cache
         )
         {
+            this.logger = logger;
             this.client = client;
             this.httpClient = httpClient;
             this.cache = cache;
@@ -62,9 +66,14 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
             using (var gzipStream = new GZipInputStream(httpStream))
             using (var archive = TarArchive.CreateInputTarArchive(gzipStream, Encoding.Default))
             {
+                logger.LogInformation("Extracting tar archive for repository: {Owner}/{Name}", owner, name);
+
                 var rootPath = Path.Join(Path.GetTempPath(), nameof(GitHubRepositoryService));
                 var extractRootPath = Path.GetTempFileName();
                 var dirPath = Path.Join(rootPath, owner, name);
+
+                logger.LogInformation("Temporary extraction path: {ExtractRootPath}", extractRootPath);
+                logger.LogInformation("Target extract path: {DirPath}", dirPath);
 
                 if (Directory.Exists(dirPath))
                     Directory.Delete(dirPath, true);
@@ -76,7 +85,11 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
 
                 var extractedDirPath = Directory.GetDirectories(extractRootPath).Single();
                 Directory.Move(extractedDirPath, dirPath);
-                Directory.Delete(extractRootPath);
+
+                if (Directory.Exists(extractRootPath))
+                    Directory.Delete(extractRootPath);
+
+                logger.LogInformation("Extracted {Owner}/{Name} successfully", owner, name);
 
                 return dirPath;
             }
