@@ -1,45 +1,41 @@
 using System;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Octokit.Internal;
+using Microsoft.Extensions.Caching.Memory;
 using OpenTabletDriver.Web.Core.Services;
 
 namespace OpenTabletDriver.Web.Core.GitHub.Services
 {
     public class GitHubTabletService : ITabletService
     {
-        private readonly IServiceProvider serviceProvider;
-        private readonly IReleaseService releaseService;
-        private readonly HttpClient httpClient;
+        private readonly IRepositoryService repositoryService;
+        private readonly IMemoryCache cache;
 
-        public GitHubTabletService(IServiceProvider serviceProvider, IReleaseService releaseService, HttpClient httpClient)
+        public GitHubTabletService(
+            IRepositoryService repositoryService,
+            IMemoryCache cache
+        )
         {
-            this.serviceProvider = serviceProvider;
-            this.releaseService = releaseService;
-            this.httpClient = httpClient;
-
-            GetMarkdownCached = new CachedTask<string>(GetMarkdownRawInternal, CacheTime);
+            this.repositoryService = repositoryService;
+            this.cache = cache;
         }
 
-        private static readonly TimeSpan CacheTime = TimeSpan.FromMinutes(1);
-
-        private CachedTask<string> GetMarkdownCached { get; }
+        private static readonly TimeSpan Expiration = TimeSpan.FromMinutes(5);
 
         public Task<string> GetMarkdownRaw()
         {
-            return GetMarkdownCached;
+            const string key = nameof(GitHubTabletService) + nameof(GetMarkdownRaw);
+            return cache.GetOrCreateAsync(key, GetMarkdownRawInternal);
         }
 
-        public async Task<string> GetMarkdownRawInternal()
+        public async Task<string> GetMarkdownRawInternal(ICacheEntry entry)
         {
-            var repoContent = await releaseService.GetRepositoryContent();
-            var file = repoContent.First(r => r.Name == "TABLETS.md");
+            entry.AbsoluteExpirationRelativeToNow = Expiration;
 
-            using (var httpStream = await httpClient.GetStreamAsync(file.DownloadUrl))
-            using (var sr = new StreamReader(httpStream))
+            var repo = await repositoryService.GetRepository();
+
+            using (var stream = await repositoryService.GetFileFromRepository(repo, "TABLETS.md"))
+            using (var sr = new StreamReader(stream))
             {
                 return await sr.ReadToEndAsync();
             }

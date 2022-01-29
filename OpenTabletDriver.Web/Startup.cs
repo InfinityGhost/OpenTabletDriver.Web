@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -9,10 +10,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Octokit;
 using OpenTabletDriver.Web.Controllers;
+using OpenTabletDriver.Web.Core;
+using OpenTabletDriver.Web.Core.Contracts;
 using OpenTabletDriver.Web.Core.Framework;
 using OpenTabletDriver.Web.Core.GitHub.Services;
 using OpenTabletDriver.Web.Core.Plugins;
 using OpenTabletDriver.Web.Core.Services;
+using ProductHeaderValue = Octokit.ProductHeaderValue;
 
 namespace OpenTabletDriver.Web
 {
@@ -30,14 +34,16 @@ namespace OpenTabletDriver.Web
         {
             services.AddControllersWithViews();
 
-            services.AddSingleton<IReleaseService, GitHubReleaseService>()
+            services.AddSingleton<IRepositoryService, GitHubRepositoryService>()
+                .AddSingleton<IReleaseService, GitHubReleaseService>()
                 .AddSingleton<IGitHubClient, GitHubClient>(AuthenticateGitHub)
                 .AddSingleton<ITabletService, GitHubTabletService>()
                 .AddSingleton<IPluginMetadataService, GitHubPluginMetadataService>()
                 .AddSingleton<IFrameworkService, DotnetCoreService>();
 
-            services.AddHttpClient<ITabletService, GitHubTabletService>(SetupHttpClient);
-            services.AddHttpClient<IPluginMetadataService, GitHubPluginMetadataService>(SetupHttpClient);
+            services.AddHttpClient<IRepositoryService, GitHubRepositoryService>(SetupHttpClient);
+
+            services.AddMemoryCache();
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {

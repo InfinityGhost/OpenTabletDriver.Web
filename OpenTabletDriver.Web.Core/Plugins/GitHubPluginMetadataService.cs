@@ -1,91 +1,59 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
-using ICSharpCode.SharpZipLib.GZip;
-using ICSharpCode.SharpZipLib.Tar;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
+using Octokit;
 using OpenTabletDriver.Web.Core.Services;
 
 namespace OpenTabletDriver.Web.Core.Plugins
 {
     public class GitHubPluginMetadataService : IPluginMetadataService
     {
-        private readonly HttpClient httpClient;
+        private readonly IRepositoryService repositoryService;
+        private readonly IGitHubClient client;
+        private readonly IMemoryCache cache;
 
-        public GitHubPluginMetadataService(HttpClient httpClient)
+        public GitHubPluginMetadataService(
+            IRepositoryService repositoryService,
+            IGitHubClient client,
+            IMemoryCache cache
+        )
         {
-            this.httpClient = httpClient;
+            this.repositoryService = repositoryService;
+            this.client = client;
+            this.cache = cache;
         }
 
-        public const string REPOSITORY_OWNER = "OpenTabletDriver";
-        public const string REPOSITORY_NAME = "Plugin-Repository";
+        private const string REPOSITORY_OWNER = "OpenTabletDriver";
+        private const string REPOSITORY_NAME = "Plugin-Repository";
 
-        public async Task<IEnumerable<PluginMetadata>> GetPlugins()
+        private static readonly TimeSpan Expiration = TimeSpan.FromMinutes(1);
+
+        public Task<IReadOnlyList<PluginMetadata>> GetPlugins()
         {
+            const string key = nameof(GitHubPluginMetadataService) + nameof(GetPlugins);
+            return cache.GetOrCreateAsync(key, GetPluginsInternal);
+        }
+
+        private async Task<IReadOnlyList<PluginMetadata>> GetPluginsInternal(ICacheEntry entry)
+        {
+            entry.AbsoluteExpirationRelativeToNow = Expiration;
+
             var plugins = await DownloadAsync(REPOSITORY_OWNER, REPOSITORY_NAME);
-            return plugins.OrderBy(p => p.Name).Distinct(new PluginMetadataComparer());
+            return plugins.OrderBy(p => p.Name).Distinct(new PluginMetadataComparer()).ToArray();
         }
 
-        public async Task<IEnumerable<PluginMetadata>> DownloadAsync(string owner, string name,
-            string gitRef = null)
+        private async Task<IEnumerable<PluginMetadata>> DownloadAsync(string owner, string name)
         {
-            string archiveUrl = $"https://api.github.com/repos/{owner}/{name}/tarball/{gitRef}";
-            return await DownloadAsync(archiveUrl);
+            var repo = await client.Repository.Get(owner, name);
+            var path = await repositoryService.DownloadRepositoryTarball(repo);
+            return EnumeratePluginMetadata(path);
         }
 
-        public async Task<IEnumerable<PluginMetadata>> DownloadAsync(string archiveUrl)
-        {
-            using (var httpStream = await httpClient.GetStreamAsync(archiveUrl))
-                return FromStream(httpStream);
-        }
-
-        public static IEnumerable<PluginMetadata> FromStream(Stream stream)
-        {
-            var memStream = new MemoryStream();
-            stream.CopyTo(memStream);
-
-            using (memStream)
-            using (var gzipStream = new GZipInputStream(memStream))
-            using (var archive = TarArchive.CreateInputTarArchive(gzipStream, null))
-            {
-                string hash = CalculateSHA256(memStream);
-                string temp = Path.GetTempPath();
-
-                Directory.CreateDirectory(temp);
-                string cacheDir = Path.Join(temp, $"{hash}-OpenTabletDriver-PluginMetadata");
-
-                if (!Directory.Exists(cacheDir))
-                    archive.ExtractContents(cacheDir);
-
-                return EnumeratePluginMetadata(cacheDir);
-            }
-        }
-
-        protected static string CalculateSHA256(Stream stream)
-        {
-            using (var sha256 = SHA256.Create())
-            {
-                var hashData = sha256.ComputeHash(stream);
-                stream.Position = 0;
-                var sb = new StringBuilder();
-                foreach (var val in hashData)
-                {
-                    var hex = val.ToString("x2");
-                    sb.Append(hex);
-                }
-
-                return sb.ToString();
-            }
-        }
-
-        protected static IEnumerable<PluginMetadata> EnumeratePluginMetadata(string directoryPath)
+        private static IEnumerable<PluginMetadata> EnumeratePluginMetadata(string directoryPath)
         {
             var serializer = new JsonSerializer();
             foreach (var file in Directory.EnumerateFiles(directoryPath, "*.json", SearchOption.AllDirectories))
@@ -101,9 +69,12 @@ namespace OpenTabletDriver.Web.Core.Plugins
         {
             public bool Equals(PluginMetadata x, PluginMetadata y)
             {
+                if (x is null || y is null)
+                    return false;
+
                 return x.Name == y.Name &&
-                    x.Owner == y.Owner &&
-                    x.RepositoryUrl == y.RepositoryUrl;
+                       x.Owner == y.Owner &&
+                       x.RepositoryUrl == y.RepositoryUrl;
             }
 
             public int GetHashCode(PluginMetadata obj)
