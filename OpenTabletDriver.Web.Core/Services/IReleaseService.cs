@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Octokit;
 using OpenTabletDriver.Web.Core.Contracts;
 
 namespace OpenTabletDriver.Web.Core.Services

@@ -1,5 +1,3 @@
-using System.IO;
-
 namespace OpenTabletDriver.Web.Core.Contracts
 {
     public interface IReleaseAsset

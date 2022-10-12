@@ -1,8 +1,18 @@
 @{
     ViewData["Title"] = "Tablets";
+
+    string GetStatus(DeviceSupportStatus supportStatus)
+    {
+        if (supportStatus == DeviceSupportStatus.HasQuirks)
+            return "Has Quirks";
+        if (supportStatus == DeviceSupportStatus.MissingFeatures)
+            return "Missing Features";
+        return supportStatus.ToString();
+    }
 }
 
-@model ContentSearchViewModel
+@using OpenTabletDriver.Tablet
+@model TabletsViewModel
 
 <div class="container">
     <div class="card mb-4">
@@ -17,14 +27,36 @@
                value="@Model.Search"/>
         <label for="searchInput">Search</label>
     </div>
-    @Model.Content
+    <table id="tablets" class="table table-hover">
+        <thead>
+            <tr>
+                <th>Tablet</th>
+                <th style="text-align: center">Status</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var configuration in Model.Configurations)
+            {
+                var name = configuration.ToString();
+                var supportStatus = GetStatus(configuration.Metadata.SupportStatus);
+                var notes = string.Join(", ", configuration.Metadata.Notes);
+
+                <tr>
+                    <td>@name</td>
+                    <td style="text-align: center">@supportStatus</td>
+                    <td>@notes</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>
 
 @section Scripts
 {
     <script type="text/javascript">
         document.onreadystatechange = function () {
-            if (document.readyState == "complete") {
+            if (document.readyState === "complete") {
                 search();
             }
         };

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ namespace OpenTabletDriver.Web.Core.Services
     {
         Task<Repository> GetRepository();
         Task<string> DownloadRepositoryTarball(Repository repository);
-        Task<Stream> GetFileFromRepository(Repository repository, string relativePath);
+        Task<FileStream> GetFile(Repository repository, string relativePath);
+        Task<IEnumerable<FileStream>> GetFiles(Repository repository, Func<string, bool> predicate);
     }
 }

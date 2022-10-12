@@ -1,5 +1,3 @@
-using System;
-
 namespace OpenTabletDriver.Web.Models
 {
     public class ErrorViewModel

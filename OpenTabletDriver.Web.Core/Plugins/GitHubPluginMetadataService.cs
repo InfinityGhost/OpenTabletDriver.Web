@@ -12,9 +12,9 @@ namespace OpenTabletDriver.Web.Core.Plugins
 {
     public class GitHubPluginMetadataService : IPluginMetadataService
     {
-        private readonly IRepositoryService repositoryService;
-        private readonly IGitHubClient client;
-        private readonly IMemoryCache cache;
+        private readonly IRepositoryService _repositoryService;
+        private readonly IGitHubClient _client;
+        private readonly IMemoryCache _cache;
 
         public GitHubPluginMetadataService(
             IRepositoryService repositoryService,
@@ -22,9 +22,9 @@ namespace OpenTabletDriver.Web.Core.Plugins
             IMemoryCache cache
         )
         {
-            this.repositoryService = repositoryService;
-            this.client = client;
-            this.cache = cache;
+            _repositoryService = repositoryService;
+            _client = client;
+            _cache = cache;
         }
 
         private const string REPOSITORY_OWNER = "OpenTabletDriver";
@@ -35,7 +35,7 @@ namespace OpenTabletDriver.Web.Core.Plugins
         public Task<IReadOnlyList<PluginMetadata>> GetPlugins()
         {
             const string key = nameof(GitHubPluginMetadataService) + nameof(GetPlugins);
-            return cache.GetOrCreateAsync(key, GetPluginsInternal);
+            return _cache.GetOrCreateAsync(key, GetPluginsInternal);
         }
 
         private async Task<IReadOnlyList<PluginMetadata>> GetPluginsInternal(ICacheEntry entry)
@@ -48,8 +48,8 @@ namespace OpenTabletDriver.Web.Core.Plugins
 
         private async Task<IEnumerable<PluginMetadata>> DownloadAsync(string owner, string name)
         {
-            var repo = await client.Repository.Get(owner, name);
-            var path = await repositoryService.DownloadRepositoryTarball(repo);
+            var repo = await _client.Repository.Get(owner, name);
+            var path = await _repositoryService.DownloadRepositoryTarball(repo);
             return EnumeratePluginMetadata(path);
         }
 

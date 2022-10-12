@@ -1,5 +1,4 @@
 @using OpenTabletDriver.Web.Core.Contracts
-@using Octokit
 
 @model IEnumerable<IRelease>
 @{
@@ -10,12 +9,12 @@
     <aside>
         <div class="nav flex-column nav-pills me-3" id="tab" role="tablist" aria-orientation="vertical">
             @{
-                int tabIndex = 0;
-                foreach (IRelease release in Model)
+                var tabIndex = 0;
+                foreach (var release in Model)
                 {
-                    string tag = release.Tag.Replace('.', '-');
-                    string tab = $"{tag}-tab";
-                    string selected = (tabIndex == 0).ToString().ToLower();
+                    var tag = release.Tag.Replace('.', '-');
+                    var tab = $"{tag}-tab";
+                    var selected = (tabIndex == 0).ToString().ToLower();
                     <a class="nav-link mb-1 @(tabIndex == 0 ? "active" : string.Empty)" id="@(tab)"
                        data-bs-toggle="pill" data-bs-target="#@(tag)"
                        type="button" role="tab"

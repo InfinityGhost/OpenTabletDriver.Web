@@ -1,5 +1,4 @@
 @using OpenTabletDriver.Web.Core.Plugins
-@using System.Data.Common
 
 @model EnumerableSearchViewModel<PluginMetadata>
 
@@ -76,7 +75,7 @@
 {
     <script type="text/javascript">
         document.onreadystatechange = function () {
-            if (document.readyState == "complete") {
+            if (document.readyState === "complete") {
                 filter();
             }
         };

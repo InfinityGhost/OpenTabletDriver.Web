@@ -4,17 +4,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Octokit;
 using OpenTabletDriver.Web.Core.Contracts;
-using OpenTabletDriver.Web.Core.GitHub.Services;
 using OpenTabletDriver.Web.Core.Services;
 
 namespace OpenTabletDriver.Web.Core.GitHub
 {
     public class GitHubRelease : IRelease
     {
-        private readonly IServiceProvider serviceProvider;
-        private readonly IGitHubClient client;
-        private readonly IRepositoryService repositoryService;
-        private readonly Release release;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IGitHubClient _client;
+        private readonly IRepositoryService _repositoryService;
+        private readonly Release _release;
 
         public GitHubRelease(
             IServiceProvider serviceProvider,
@@ -23,25 +22,25 @@ namespace OpenTabletDriver.Web.Core.GitHub
             Release release
         )
         {
-            this.serviceProvider = serviceProvider;
-            this.client = client;
-            this.repositoryService = repositoryService;
-            this.release = release;
+            _serviceProvider = serviceProvider;
+            _client = client;
+            _repositoryService = repositoryService;
+            _release = release;
         }
 
-        private IEnumerable<ReleaseAsset> releaseAssets;
+        private IEnumerable<ReleaseAsset> _releaseAssets;
 
-        public string Name => release.TagName;
-        public string Tag => release.TagName;
-        public string Url => release.HtmlUrl;
-        public string Body => release.Body;
-        public DateTimeOffset Date => release.PublishedAt ?? release.CreatedAt;
+        public string Name => _release.TagName;
+        public string Tag => _release.TagName;
+        public string Url => _release.HtmlUrl;
+        public string Body => _release.Body;
+        public DateTimeOffset Date => _release.PublishedAt ?? _release.CreatedAt;
 
         public async Task<IEnumerable<IReleaseAsset>> GetReleaseAssets()
         {
-            var repo = await repositoryService.GetRepository();
-            releaseAssets ??= await client.Repository.Release.GetAllAssets(repo.Id, release.Id);
-            return releaseAssets.Select(r => serviceProvider.CreateInstance<GitHubReleaseAsset>(r));
+            var repo = await _repositoryService.GetRepository();
+            _releaseAssets ??= await _client.Repository.Release.GetAllAssets(repo.Id, _release.Id);
+            return _releaseAssets.Select(r => _serviceProvider.CreateInstance<GitHubReleaseAsset>(r));
         }
     }
 }

@@ -8,10 +8,10 @@ namespace OpenTabletDriver.Web.Controllers
     {
         public FrameworkController(IFrameworkService frameworkService)
         {
-            this.frameworkService = frameworkService;
+            _frameworkService = frameworkService;
         }
 
-        private IFrameworkService frameworkService;
+        private IFrameworkService _frameworkService;
 
         public IActionResult Index()
         {
@@ -34,7 +34,7 @@ namespace OpenTabletDriver.Web.Controllers
             else if (userAgent.Contains("arm64"))
                 architecture = FrameworkArchitecture.ARM64;
 
-            string url = frameworkService.GetLatestVersionUrl(platform, architecture);
+            var url = _frameworkService.GetLatestVersionUrl(platform, architecture);
             return Redirect(url);
         }
     }

@@ -11,10 +11,10 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
 {
     public class GitHubReleaseService : IReleaseService
     {
-        private IServiceProvider serviceProvider;
-        private IRepositoryService repositoryService;
-        private IGitHubClient client;
-        private IMemoryCache cache;
+        private IServiceProvider _serviceProvider;
+        private IRepositoryService _repositoryService;
+        private IGitHubClient _client;
+        private IMemoryCache _cache;
 
         public GitHubReleaseService(
             IServiceProvider serviceProvider,
@@ -23,10 +23,10 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
             IMemoryCache cache
         )
         {
-            this.serviceProvider = serviceProvider;
-            this.repositoryService = repositoryService;
-            this.client = client;
-            this.cache = cache;
+            _serviceProvider = serviceProvider;
+            _repositoryService = repositoryService;
+            _client = client;
+            _cache = cache;
         }
 
         private static readonly TimeSpan Expiration = TimeSpan.FromMinutes(10);
@@ -34,40 +34,40 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
         public Task<IReadOnlyList<IRelease>> GetAllReleases()
         {
             const string key = nameof(GitHubReleaseService) + nameof(GetAllReleases);
-            return cache.GetOrCreateAsync(key, GetAllReleasesInternal);
+            return _cache.GetOrCreateAsync(key, GetAllReleasesInternal);
         }
 
         public Task<IRelease> GetLatestRelease()
         {
             const string key = nameof(GitHubReleaseService) + nameof(GetLatestRelease);
-            return cache.GetOrCreateAsync(key, GetLatestReleaseInternal);
+            return _cache.GetOrCreateAsync(key, GetLatestReleaseInternal);
         }
 
         public async Task<IRelease> GetRelease(string tag)
         {
-            var repo = await repositoryService.GetRepository();
-            var release = await client.Repository.Release.Get(repo.Id, tag);
+            var repo = await _repositoryService.GetRepository();
+            var release = await _client.Repository.Release.Get(repo.Id, tag);
 
-            return serviceProvider.CreateInstance<GitHubRelease>(release);
+            return _serviceProvider.CreateInstance<GitHubRelease>(release);
         }
 
         private async Task<IRelease> GetLatestReleaseInternal(ICacheEntry entry)
         {
             entry.AbsoluteExpirationRelativeToNow = Expiration;
 
-            var repo = await repositoryService.GetRepository();
-            var release = await client.Repository.Release.GetLatest(repo.Id);
+            var repo = await _repositoryService.GetRepository();
+            var release = await _client.Repository.Release.GetLatest(repo.Id);
 
-            return serviceProvider.CreateInstance<GitHubRelease>(release);
+            return _serviceProvider.CreateInstance<GitHubRelease>(release);
         }
 
         private async Task<IReadOnlyList<IRelease>> GetAllReleasesInternal(ICacheEntry entry)
         {
             entry.AbsoluteExpirationRelativeToNow = Expiration;
 
-            var repo = await repositoryService.GetRepository();
-            var releases = await client.Repository.Release.GetAll(repo.Id);
-            return releases.Select(r => serviceProvider.CreateInstance<GitHubRelease>(r)).ToArray();
+            var repo = await _repositoryService.GetRepository();
+            var releases = await _client.Repository.Release.GetAll(repo.Id);
+            return releases.Select(r => _serviceProvider.CreateInstance<GitHubRelease>(r)).ToArray();
         }
     }
 }

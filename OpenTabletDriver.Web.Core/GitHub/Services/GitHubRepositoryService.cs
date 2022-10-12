@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -15,10 +17,10 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
 {
     public class GitHubRepositoryService : IRepositoryService
     {
-        private readonly ILogger<GitHubRepositoryService> logger;
-        private readonly IGitHubClient client;
-        private readonly HttpClient httpClient;
-        private readonly IMemoryCache cache;
+        private readonly ILogger<GitHubRepositoryService> _logger;
+        private readonly IGitHubClient _client;
+        private readonly HttpClient _httpClient;
+        private readonly IMemoryCache _cache;
 
         public GitHubRepositoryService(
             ILogger<GitHubRepositoryService> logger,
@@ -27,10 +29,10 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
             IMemoryCache cache
         )
         {
-            this.logger = logger;
-            this.client = client;
-            this.httpClient = httpClient;
-            this.cache = cache;
+            _logger = logger;
+            _client = client;
+            _httpClient = httpClient;
+            _cache = cache;
         }
 
         private const string REPOSITORY_OWNER = "OpenTabletDriver";
@@ -41,7 +43,7 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
         public Task<Repository> GetRepository()
         {
             const string key = nameof(GitHubRepositoryService) + nameof(GetRepository);
-            return cache.GetOrCreateAsync(key, GetRepositoryInternal);
+            return _cache.GetOrCreateAsync(key, GetRepositoryInternal);
         }
 
         public async Task<string> DownloadRepositoryTarball(Repository repository)
@@ -53,27 +55,38 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
             return await DownloadAndExtract(tarballUrl, owner, name);
         }
 
-        public async Task<Stream> GetFileFromRepository(Repository repository, string relativePath)
+        public async Task<FileStream> GetFile(Repository repository, string relativePath)
         {
             var archivePath = await DownloadRepositoryTarball(repository);
             var absolutePath = Path.Join(archivePath, relativePath);
             return File.OpenRead(absolutePath);
         }
 
+        public async Task<IEnumerable<FileStream>> GetFiles(Repository repository, Func<string, bool> predicate)
+        {
+            var archivePath = await DownloadRepositoryTarball(repository);
+            var trim = archivePath.Length + 1;
+
+            return from path in Directory.GetFiles(archivePath, "*", SearchOption.AllDirectories)
+                let relativePath = path[trim..]
+                where predicate(relativePath)
+                select File.OpenRead(path);
+        }
+
         private async Task<string> DownloadAndExtract(string url, string owner, string name)
         {
-            using (var httpStream = await httpClient.GetStreamAsync(url))
+            using (var httpStream = await _httpClient.GetStreamAsync(url))
             using (var gzipStream = new GZipInputStream(httpStream))
             using (var archive = TarArchive.CreateInputTarArchive(gzipStream, Encoding.Default))
             {
-                logger.LogInformation("Extracting tar archive for repository: {Owner}/{Name}", owner, name);
+                _logger.LogInformation("Extracting tar archive for repository: {Owner}/{Name}", owner, name);
 
                 var rootPath = Path.Join(Path.GetTempPath(), nameof(GitHubRepositoryService));
                 var extractRootPath = Path.GetTempFileName();
                 var dirPath = Path.Join(rootPath, owner, name);
 
-                logger.LogInformation("Temporary extraction path: {ExtractRootPath}", extractRootPath);
-                logger.LogInformation("Target extract path: {DirPath}", dirPath);
+                _logger.LogInformation("Temporary extraction path: {ExtractRootPath}", extractRootPath);
+                _logger.LogInformation("Target extract path: {DirPath}", dirPath);
 
                 if (Directory.Exists(dirPath))
                     Directory.Delete(dirPath, true);
@@ -90,7 +103,7 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
                 if (Directory.Exists(extractRootPath))
                     Directory.Delete(extractRootPath);
 
-                logger.LogInformation("Extracted {Owner}/{Name} successfully", owner, name);
+                _logger.LogInformation("Extracted {Owner}/{Name} successfully", owner, name);
 
                 return dirPath;
             }
@@ -99,7 +112,7 @@ namespace OpenTabletDriver.Web.Core.GitHub.Services
         private Task<Repository> GetRepositoryInternal(ICacheEntry entry)
         {
             entry.AbsoluteExpirationRelativeToNow = Expiration;
-            return client.Repository.Get(REPOSITORY_OWNER, REPOSITORY_NAME);
+            return _client.Repository.Get(REPOSITORY_OWNER, REPOSITORY_NAME);
         }
     }
 }
